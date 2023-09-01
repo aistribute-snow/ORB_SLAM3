@@ -1,0 +1,80 @@
+# Image taken from https://github.com/turlucode/ros-docker-gui
+FROM ros:noetic-perception
+ENV CATKIN_WS=/root/catkin_ws
+RUN apt-get update
+ 
+RUN apt-get install -y gnupg2 curl lsb-core vim wget python3-pip libpng16-16 libjpeg-turbo8 libtiff5
+
+RUN apt-get install -y \
+        # Base tools
+        cmake \
+        build-essential \
+        git \
+        unzip \
+        pkg-config \
+        python-dev \
+        # OpenCV dependencies
+        python-numpy \
+        # Pangolin dependencies
+        libgl1-mesa-dev \
+        libglew-dev \
+        libpython2.7-dev \
+        libeigen3-dev \
+        apt-transport-https \
+        ca-certificates\
+        software-properties-common \
+        python-is-python3
+
+
+# # Build Pangolin
+# RUN cd /tmp && git clone https://github.com/stevenlovegrove/Pangolin && \
+#     cd Pangolin && git checkout v0.6 && mkdir build && cd build && \
+#     cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS=-std=c++11 .. && \
+#     make -j$nproc && make install && \
+#     cd / && rm -rf /tmp/Pangolin
+
+RUN cd /tmp && git clone --recursive https://github.com/stevenlovegrove/Pangolin.git &&\
+    cd Pangolin &&\
+    ./scripts/install_prerequisites.sh recommended &&\
+    cmake -B build &&\
+    cmake --build build &&\
+    cmake -B build -GNinja &&\
+    cmake --build build &&\
+    cmake --build build -t pypangolin_pip_install  
+
+# Install Open CV - Warning, this takes absolutely forever
+RUN cd ~ && git clone https://github.com/opencv/opencv.git && \ 
+    cd opencv && \
+    git checkout 4.4.0 && \
+    cd ~ && git clone https://github.com/opencv/opencv_contrib.git && \
+    cd opencv_contrib && \
+    git checkout 4.4.0 && \
+    cd ~/opencv && mkdir -p build && cd build && \
+    cmake -D CMAKE_BUILD_TYPE=RELEASE \
+    -D CMAKE_INSTALL_PREFIX=/usr/local \ 
+    -D INSTALL_C_EXAMPLES=ON \ 
+    -D INSTALL_PYTHON_EXAMPLES=ON \ 
+    -D OPENCV_EXTRA_MODULES_PATH=~/opencv_contrib/modules \ 
+    -D BUILD_EXAMPLES=OFF .. && \
+    make -j4 && \
+    make install && \ 
+    ldconfig
+    
+
+RUN mkdir /root/catkin_ws/ && cd /root/catkin_ws && git clone https://github.com/aPR0T0/ORB_SLAM3.git
+RUN cd /root/catkin_ws/ORB_SLAM3 && \
+	 chmod +x build.sh && \
+	 ./build.sh
+	 
+RUN /root/catkin_ws/ORB_SLAM3 && \
+    echo "source /opt/ros/noetic/setup.bash" >> ~/.bashrc &&\
+    echo "export ROS_PACKAGE_PATH=${ROS_PACKAGE_PATH}:/root/catkin_ws/ORB_SLAM3/Examples/ROS/ORB_SLAM3" >> ~/.bashrc &&\
+    chmod +x build_ros.sh &&\
+    ./build_ros.sh
+
+	 
+# RUN echo "source /root/catkin_ws/ORB_SLAM3/Examples_old/ROS/ORB_SLAM3/devel/setup.bash" >> ~/.bashrc 
+
+WORKDIR /root/catkin_ws/ORB_SLAM3
+	 
+	 
