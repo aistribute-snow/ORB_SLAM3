@@ -22,8 +22,8 @@ RUN apt-get install -y \
         libeigen3-dev \
         apt-transport-https \
         ca-certificates\
-        software-properties-common \
-        python-is-python3
+        software-properties-common 
+        #python-is-python3
 
 
 # # Build Pangolin
@@ -33,15 +33,19 @@ RUN apt-get install -y \
 #     make -j$nproc && make install && \
 #     cd / && rm -rf /tmp/Pangolin
 
-RUN cd /tmp && git clone --recursive https://github.com/stevenlovegrove/Pangolin.git &&\
-    cd Pangolin &&\
+RUN cd /tmp && git clone --recursive https://github.com/aistribute-snow/Pangolin.git
+RUN apt-get install -y ninja-build
+
+RUN cd /tmp/Pangolin &&\
     ./scripts/install_prerequisites.sh recommended &&\
     cmake -B build &&\
     cmake --build build &&\
-    cmake -B build -GNinja &&\
+    cmake -B build &&\
     cmake --build build &&\
     cmake --build build -t pypangolin_pip_install  
 
+RUN apt install -y libgtk2.0-dev pkg-config libcanberra-gtk-module python-is-python3
+RUN pip install opencv-python --upgrade
 # Install Open CV - Warning, this takes absolutely forever
 RUN cd ~ && git clone https://github.com/opencv/opencv.git && \ 
     cd opencv && \
@@ -66,15 +70,28 @@ RUN cd /root/catkin_ws/ORB_SLAM3 && \
 	 chmod +x build.sh && \
 	 ./build.sh
 	 
-RUN /root/catkin_ws/ORB_SLAM3 && \
+RUN cd /root/catkin_ws/ORB_SLAM3 && \
+    # apt install -y python-is-python3 &&\
     echo "source /opt/ros/noetic/setup.bash" >> ~/.bashrc &&\
-    echo "export ROS_PACKAGE_PATH=${ROS_PACKAGE_PATH}:/root/catkin_ws/ORB_SLAM3/Examples/ROS/ORB_SLAM3" >> ~/.bashrc &&\
+    echo "export ROS_PACKAGE_PATH=\${ROS_PACKAGE_PATH}:/root/catkin_ws/ORB_SLAM3/Examples/ROS/ORB_SLAM3" >> ~/.bashrc &&\
+    . /opt/ros/${ROS_DISTRO}/setup.sh &&\    
+    export ROS_PACKAGE_PATH=${ROS_PACKAGE_PATH}:/root/catkin_ws/ORB_SLAM3/Examples/ROS/ORB_SLAM3 &&\
     chmod +x build_ros.sh &&\
     ./build_ros.sh
 
 	 
-# RUN echo "source /root/catkin_ws/ORB_SLAM3/Examples_old/ROS/ORB_SLAM3/devel/setup.bash" >> ~/.bashrc 
 
 WORKDIR /root/catkin_ws/ORB_SLAM3
 	 
+# build
+# docker build --tag ros:orbSLAM3_bug_fixed -f ./Dockerfile_cpu .
+
+# image:
+# docker run -td --privileged --net=host -v /home/snowai/warehouse_ws:/root/catkin_ws/warehouse/ -v "/tmp/.X11-unix:/tmp/.X11-unix" -v /mnt/wslg:/mnt/wslg  --name="orbSLAM3_bug_fixed" -e DISPLAY -e WAYLAND_DISPLAY -e XDG_RUNTIME_DIR -e PULSE_SERVER ros:orbSLAM3_bug_fixed bash
+
+
+# exec
+# docker exec -it orbSLAM3_bug_fixed bash
+
+
 	 
